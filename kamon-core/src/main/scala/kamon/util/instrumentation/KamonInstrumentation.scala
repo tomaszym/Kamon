@@ -94,13 +94,13 @@ abstract class KamonInstrumentation {
         }
 
         override def onComplete(typeName: String): Unit = {
-          System.out.println("Completed - " + typeName);
+//          System.out.println("Completed - " + typeName);
         }
 
         override def onIgnored(typeDescription: TypeDescription): Unit = {
           //                          System.out.println("Ignored - " + typeDescription);
         }
-      }).`type`(elementMatcher, is(ClassLoader.getSystemClassLoader)) //.transform(getTransformer()).installOn(instrumentation)
+      }).`type`(elementMatcher) //.transform(getTransformer()).installOn(instrumentation)
     mixins.result().foreach { mixin ⇒
       builder.transform(withTransformer { (b, _) ⇒
         b.classVisitor(new ClassVisitorWrapper {
