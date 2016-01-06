@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -44,11 +44,9 @@ class FutureInstrumentation extends KamonInstrumentation {
 
   class InjectTraceContext extends TraceContextAware {
     @transient
-    var traceContext: TraceContext = _
+    var traceContext: TraceContext =  _
 
     @initializer
-    def init(): Unit = {
-      this.traceContext = Tracer.currentContext
-    }
+    def init(): Unit =  this.traceContext = Tracer.currentContext
   }
 }

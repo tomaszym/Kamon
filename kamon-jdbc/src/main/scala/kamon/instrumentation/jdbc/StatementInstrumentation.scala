@@ -1,5 +1,5 @@
 /* =========================================================================================
- * Copyright © 2013-2015 the kamon project <http://kamon.io/>
+ * Copyright © 2013-2016 the kamon project <http://kamon.io/>
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -15,41 +15,35 @@
 
 package kamon.instrumentation.jdbc
 
-import java.lang.instrument.Instrumentation
 import java.sql.SQLException
 import java.util.concurrent.Callable
 
 import kamon.util.instrumentation.KamonInstrumentation
-import net.bytebuddy.agent.builder.AgentBuilder
-import net.bytebuddy.description.`type`.TypeDescription
+import net.bytebuddy.description.NamedElement
 import net.bytebuddy.implementation.MethodDelegation._
 import net.bytebuddy.implementation.bind.annotation._
-import net.bytebuddy.matcher.ElementMatcher.Junction
 import net.bytebuddy.matcher.ElementMatchers._
 
 class StatementInstrumentation extends KamonInstrumentation {
 
-  private val Statement: Junction[TypeDescription] = isSubTypeOf(typePool.describe("java.sql.Statement").resolve())
-
-  override def register(instrumentation: Instrumentation): Unit = {
-    new AgentBuilder.Default()
-      .`type`(Statement, is(ClassLoader.getSystemClassLoader))
-      .transform(statementTransformer)
-      .installOn(instrumentation)
+//  forSubtypeOf("java.sql.Statement")
+  forType {
+    isSubTypeOf(typePool.describe("java.sql.Statement").resolve()).and(not(isInterface()))
   }
 
-  def statementTransformer = withTransformer { (builder, typeDescription) ⇒
+  addTransformation { (builder, typeDescription) ⇒ {
     builder
-      .method(named("execute").and(TakesArguments)).intercept(to(StatementInterceptor).filter(NotDeclaredByObject))
-      .method(named("executeUpdate").and(TakesArguments)).intercept(to(StatementInterceptor).filter(NotDeclaredByObject))
-      .method(named("executeQuery").and(TakesArguments)).intercept(to(StatementInterceptor).filter(NotDeclaredByObject))
+      .method(named[NamedElement]("execute").or(named[NamedElement]("executeUpdate").or(named[NamedElement]("executeQuery"))).and(TakesArguments))
+      .intercept(to(StatementInterceptor).filter(NotDeclaredByObject))
+    }
+  }
+
+  object StatementInterceptor {
+    @RuntimeType
+    @throws[SQLException]
+    def execute(@SuperCall callable: Callable[_], @Argument(0) sql: String): Any = {
+      SqlProcessor.processStatement(callable, sql)
+    }
   }
 }
 
-object StatementInterceptor {
-  @RuntimeType
-  @throws[SQLException]
-  def execute(@SuperCall callable: Callable[_], @Argument(0) sql: String): Any = {
-    SqlProcessor.processStatement(callable, sql)
-  }
-}

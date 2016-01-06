@@ -9,7 +9,7 @@ class MixinTraceContextVisitor(mixin: MixinDescription, classVisitor: ClassVisit
     val mv = super.visitMethod(access, name, desc, signature, exceptions)
     if (!name.startsWith(ConstructorDescriptor)) return mv
     if ((Opcodes.ACC_PUBLIC & access) == 0) return mv // skipping non public methods
-    TraceContextInitializer(this.name.getInternalName, mv, access, name, desc)
+    TraceContextInitializer(this.className.getInternalName, mv, access, name, desc)
   }
 
   class TraceContextInitializer private (className: String, mv: MethodVisitor, access: Int, name: String, desc: String) extends AdviceAdapter(Opcodes.ASM5, mv, access, name, desc) {
