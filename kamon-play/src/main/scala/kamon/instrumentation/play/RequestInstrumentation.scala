@@ -20,34 +20,41 @@ import java.util.concurrent.Callable
 import kamon.Kamon.tracer
 import kamon.play.PlayExtension
 import kamon.trace._
-import kamon.util.{initializer, SameThreadExecutionContext}
+import kamon.util.SameThreadExecutionContext
 import kamon.util.instrumentation.KamonInstrumentation
+import net.bytebuddy.description.NamedElement
 import net.bytebuddy.implementation.MethodDelegation._
-import net.bytebuddy.implementation.bind.annotation.{Argument, RuntimeType, SuperCall, This}
+import net.bytebuddy.implementation.bind.annotation.{RuntimeType, SuperCall}
 import net.bytebuddy.matcher.ElementMatchers._
 import play.api.mvc.Results._
 import play.api.mvc._
 
-import scala.concurrent.Future
-
 
 class RequestHeaderToTraceContextAware extends KamonInstrumentation {
 
-  forType {
-    isSubTypeOf(typePool.describe("play.api.mvc.RequestHeader").resolve()).and(not(isInterface()))
+//  forSubtypeOf("play.api.mvc.RequestHeader")
+
+  forType{
+    nameMatches[NamedElement]("play.api.http..*").or(nameMatches[NamedElement]("play.api.test..*")).and(not(nameContains[NamedElement]("$"))).and(isSubTypeOf(typePool.describe("play.api.mvc.RequestHeader").resolve()).and(not(isInterface())));
   }
 
   addMixin(classOf[InjectTraceContext])
 
-  trait InjectTraceContext extends TraceContextAware
+  addTransformation((b,td) =>
+    b.classVisitor(RunnableVisitor(td))
+  )
+
+  class InjectTraceContext extends TraceContextAware {
+    val traceContext:TraceContext = null
+  }
 }
 
 
 class HttpRequestHandlerInstrumentation extends KamonInstrumentation {
 
-  forType(named("play.api.http.DefaultHttpRequestHandler"))
+  forTargetType("play.api.http.DefaultHttpRequestHandler")
 
-  addTransformation((builder, _) => builder.method(named("routeRequest")).intercept(to(HttpRequestHandlerInterceptor)))//.filter(NotDeclaredByObject)))
+  addTransformation((builder, _) => builder.method(named("routeRequest")).intercept(to(HttpRequestHandlerInterceptor).filter(NotDeclaredByObject)))
 
   object HttpRequestHandlerInterceptor {
     @RuntimeType
@@ -65,17 +72,19 @@ class HttpRequestHandlerInstrumentation extends KamonInstrumentation {
 
 class HttpFilterInstrumentation extends KamonInstrumentation {
 
-  forType {
-    isSubTypeOf(typePool.describe("play.api.http.HttpFilters").resolve()).and(not(isInterface()))
+  //forSubtypeOf("play.api.http.HttpFilters")
+
+  forType{
+    nameMatches[NamedElement]("play.api.http..*").or(nameMatches[NamedElement]("kamon.play..*")).and(not(nameContains[NamedElement]("$"))).and(isSubTypeOf(typePool.describe("play.api.http.HttpFilters").resolve()).and(not(isInterface())));
   }
 
-  addTransformation { (builder, typeDescription) =>
+  addTransformation { (builder, _) =>
     builder.method(named("filters")).intercept(to(FiltersInterceptor))
   }
 
   object FiltersInterceptor {
     @RuntimeType
-    def routeRequest(@SuperCall c: Callable[_]): Any= {
+    def routeRequest(@SuperCall callable: Callable[Seq[EssentialFilter]]):Seq[EssentialFilter]= {
       val filter = new EssentialFilter {
         def apply(next: EssentialAction) = EssentialAction((requestHeader) ⇒ {
           def onResult(result: Result): Result = {
@@ -94,38 +103,46 @@ class HttpFilterInstrumentation extends KamonInstrumentation {
           next(requestHeader).map(onResult)(SameThreadExecutionContext)
         })
       }
-      c.call().asInstanceOf[Seq[EssentialFilter]] :+ filter
+
+      callable.call() match {
+        case Nil => Nil
+        case xs => xs :+ filter
+      }
     }
   }
 }
 
-//class HttpErrorHandlerInstrumentation extends KamonInstrumentation {
-//
+class HttpErrorHandlerInstrumentation extends KamonInstrumentation {
+
 //    forSubtypeOf("play.api.http.HttpErrorHandler")
 //
-//    addTransformation { (builder, typeDescription) =>
-//      builder
-//        .method(named("onClientError")).intercept(to(ClientErrorInterceptor))//.filter(NotDeclaredByObject))
-//        .method(named("onServerError")).intercept(to(ServerErrorInterceptor))//.filter(NotDeclaredByObject))
-//    }
-//
-//  object ClientErrorInterceptor {
-//    @RuntimeType
-//    def onClientError(requestContextAware: RequestHeader, statusCode: Int,  message: String, @SuperCall r: Callable[_]): Any = {
-//      requestContextAware.asInstanceOf[TraceContextAware].traceContext.collect { ctx ⇒
-//        PlayExtension.httpServerMetrics.recordResponse(ctx.name, statusCode.toString)
-//      }
-//      r.call()
-//    }
-//  }
-//
-//  object ServerErrorInterceptor {
-//    @RuntimeType
-//    def onServerError(requestContextAware: RequestHeader, ex: Throwable, @SuperCall r: Callable[_]): Any = {
-//      requestContextAware.asInstanceOf[TraceContextAware].traceContext.collect { ctx ⇒
-//        PlayExtension.httpServerMetrics.recordResponse(ctx.name, InternalServerError.header.status.toString)
-//      }
-//    r.call()
-//    }
-//  }
-//}
+
+  forType{
+    nameMatches[NamedElement]("play.api.http..*").and(not(nameContains[NamedElement]("$"))).and(isSubTypeOf(typePool.describe("play.api.http.HttpErrorHandler").resolve()).and(not(isInterface())));
+  }
+
+    addTransformation { (builder, _) =>
+      builder
+        .method(named("onClientError").or(named("onServerError")))
+        .intercept(to(ErrorInterceptor)
+        .filter(NotDeclaredByObject))
+    }
+
+  object ErrorInterceptor {
+    @RuntimeType
+    def onServerError(requestHeader: RequestHeader, ex: Throwable, @SuperCall r: Callable[Any]): Any = {
+      requestHeader.asInstanceOf[TraceContextAware].traceContext().collect { ctx ⇒
+        PlayExtension.httpServerMetrics.recordResponse(ctx.name, InternalServerError.header.status.toString)
+      }
+      r.call()
+    }
+
+    @RuntimeType
+    def onClientError(requestHeader: RequestHeader, statusCode: Int,  message: String, @SuperCall r: Callable[Any]): Any= {
+      requestHeader.asInstanceOf[TraceContextAware].traceContext().collect { ctx ⇒
+        PlayExtension.httpServerMetrics.recordResponse(ctx.name, statusCode.toString)
+      }
+      r.call()
+    }
+  }
+}

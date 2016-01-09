@@ -38,7 +38,14 @@ class WSInstrumentationSpec extends WordSpecLike with Matchers with OneServerPer
     case ("GET", "/async")   ⇒ Action { Ok("ok") }
     case ("GET", "/outside") ⇒ Action { Ok("ok") }
     case ("GET", "/inside")  ⇒ callWSinsideController(s"http://localhost:$port/async")
-  })
+  }, additionalConfiguration = Map(
+    ("application.router", "kamon.play.Routes"),
+    ("play.http.filters", "kamon.play.TestHttpFilters"),
+    ("play.http.requestHandler", "play.api.http.DefaultHttpRequestHandler"),
+    ("logger.root", "OFF"),
+    ("logger.play", "OFF"),
+    ("logger.application", "OFF")))
+
 
   "the WS instrumentation" should {
     "propagate the TraceContext inside an Action and complete the WS request" in {

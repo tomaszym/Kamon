@@ -94,7 +94,7 @@ object LoggingHandler extends LoggerLike {
   override val logger: slf4j.Logger = rootLogger
 
   def startLogging(): Unit = {
-    loggerContext.getStatusManager().add(nopStatusListener)
+    loggerContext.getStatusManager.add(nopStatusListener)
     asyncAppender.setContext(loggerContext)
     listAppender.setContext(loggerContext)
     listAppender.setName("list")

@@ -40,13 +40,14 @@ abstract class KamonInstrumentation {
 
   val typePool = TypePool.Default.ofClassPath()
   val NotDeclaredByObject: Junction[MethodDescription] = not(isDeclaredBy(classOf[Object]))
-  val TakesArguments: Junction[MethodDescription] = not(takesArguments(0))
+  val NotTakesArguments: Junction[MethodDescription] = not(takesArguments(0))
 
   //TODO:configure listener
   def register(instrumentation: Instrumentation): Unit = {
     val builder = new AgentBuilder.Default()
       .withListener(InstrumentationListener())
       .`type`(elementMatcher)
+
 
     mixins.foreach { mixin ⇒
       builder
@@ -65,6 +66,7 @@ abstract class KamonInstrumentation {
   def addTransformation(f: ⇒ (Builder[_], TypeDescription) ⇒ Builder[_]):Unit = transformers += withTransformer(f)
   def forTypes(f: ⇒ ElementMatcher[_ >: TypeDescription]): Unit = elementMatcher = f
   def forType(f: ⇒ ElementMatcher[_ >: TypeDescription]): Unit = forTypes(f)
-  def forSubtypeOf(f: ⇒ String):Unit = forType(isSubTypeOf(typePool.describe(f).resolve()))
+  def forTargetType(f: => String): Unit = forType(named(f))
+  def forSubtypeOf(f: ⇒ String):Unit = forType(isSubTypeOf(typePool.describe(f).resolve()).and(not(isInterface())))
   def addMixin(clazz: ⇒ Class[_]):Unit = mixins += MixinDescription(elementMatcher, clazz)
 }

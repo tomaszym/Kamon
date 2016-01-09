@@ -25,11 +25,7 @@ import net.bytebuddy.matcher.ElementMatchers._
 
 class PreparedStatementInstrumentation extends KamonInstrumentation {
 
-  forType{
-    isSubTypeOf(typePool.describe("java.sql.PreparedStatement").resolve()).and(not(isInterface()))
-  }
-
-//  forSubtypeOf("java.sql.PreparedStatement")
+  forSubtypeOf("java.sql.PreparedStatement")
 
   addTransformation { (builder, typeDescription) ⇒
     builder

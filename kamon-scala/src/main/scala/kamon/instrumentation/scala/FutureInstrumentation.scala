@@ -31,11 +31,11 @@ class FutureInstrumentation extends KamonInstrumentation {
 
   addMixin(classOf[InjectTraceContext])
 
-  addTransformation { (builder, _) ⇒ builder.method(named("run")).intercept(to(FutureInterceptor)) }
+  addTransformation ((builder, _) ⇒ builder.method(named("run")).intercept(to(FutureInterceptor)))
 
   object FutureInterceptor {
     @RuntimeType
-    def run(@This runnable: TraceContextAware, @SuperCall r: Runnable): Unit = {
+    def run(@SuperCall r: Runnable, @This runnable: TraceContextAware): Unit = {
       Tracer.withContext(runnable.traceContext()) {
         r.run()
       }

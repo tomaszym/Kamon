@@ -25,15 +25,11 @@ import net.bytebuddy.matcher.ElementMatchers._
 
 class ConnectionInstrumentation extends KamonInstrumentation {
 
-  forType {
-    isSubTypeOf(typePool.describe("java.sql.Connection").resolve()).and(not(isInterface()))
-  }
-
-//  forSubtypeOf("java.sql.Connection")
+  forSubtypeOf("java.sql.Connection")
 
   addTransformation{(builder, _) ⇒
     builder
-      .method(named("prepareStatement").and(TakesArguments))
+      .method(named("prepareStatement").and(NotTakesArguments))
       .intercept(to(ConnectionInterceptor).filter(NotDeclaredByObject))
   }
 

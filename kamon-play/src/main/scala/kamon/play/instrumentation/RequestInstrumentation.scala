@@ -63,7 +63,7 @@ class RequestInstrumentation {
     pjp.proceed().asInstanceOf[Seq[EssentialFilter]] :+ filter
   }
 
-  @Before("call(* play.api.http.HttpErrorHandler.onClientServerError(..)) && args(requestContextAware, statusCode, *)")
+  @Before("call(* play.api.http.HttpErrorHandler.onClientError(..)) && args(requestContextAware, statusCode, *)")
   def onClientError(requestContextAware: TraceContextAware, statusCode: Int): Unit = {
     requestContextAware.traceContext.collect { ctx ⇒
       PlayExtension.httpServerMetrics.recordResponse(ctx.name, statusCode.toString)

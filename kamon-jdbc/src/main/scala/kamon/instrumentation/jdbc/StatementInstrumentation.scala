@@ -26,15 +26,13 @@ import net.bytebuddy.matcher.ElementMatchers._
 
 class StatementInstrumentation extends KamonInstrumentation {
 
-//  forSubtypeOf("java.sql.Statement")
-  forType {
-    isSubTypeOf(typePool.describe("java.sql.Statement").resolve()).and(not(isInterface()))
-  }
+  forSubtypeOf("java.sql.Statement")
 
   addTransformation { (builder, typeDescription) ⇒ {
     builder
-      .method(named[NamedElement]("execute").or(named[NamedElement]("executeUpdate").or(named[NamedElement]("executeQuery"))).and(TakesArguments))
-      .intercept(to(StatementInterceptor).filter(NotDeclaredByObject))
+      .method(named[NamedElement]("execute").or(named[NamedElement]("executeUpdate").or(named[NamedElement]("executeQuery"))).and(NotTakesArguments))
+      .intercept(to(StatementInterceptor)
+      .filter(NotDeclaredByObject))
     }
   }
 
