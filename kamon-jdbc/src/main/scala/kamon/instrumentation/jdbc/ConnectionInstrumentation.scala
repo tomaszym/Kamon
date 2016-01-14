@@ -15,7 +15,7 @@
 
 package kamon.instrumentation.jdbc
 
-import java.sql.{PreparedStatement, SQLException}
+import java.sql.SQLException
 import java.util.concurrent.Callable
 
 import kamon.util.instrumentation.KamonInstrumentation
@@ -29,15 +29,15 @@ class ConnectionInstrumentation extends KamonInstrumentation {
 
   addTransformation{(builder, _) ⇒
     builder
-      .method(named("prepareStatement").and(NotTakesArguments))
+      .method(named("prepareStatement").and(TakesArguments))
       .intercept(to(ConnectionInterceptor).filter(NotDeclaredByObject))
   }
 
   object ConnectionInterceptor {
     @RuntimeType
     @throws[SQLException]
-    def prepareStatement(@SuperCall callable: Callable[PreparedStatement], @Argument(0) sql: String): Any = {
-      val prepareStatement = callable.call().asInstanceOf[PreparedStatementExtension]
+    def prepareStatement(@SuperCall callable: Callable[PreparedStatementExtension], @Argument(0) sql: String): Any = {
+      val prepareStatement = callable.call()
       prepareStatement.setSql(sql)
       prepareStatement
     }

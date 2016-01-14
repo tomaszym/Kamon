@@ -17,7 +17,7 @@ class WSInstrumentation extends KamonInstrumentation {
 
   forTargetType("play.api.libs.ws.ning.NingWSRequest")
 
-  addTransformation((builder, _) ⇒ builder.method(named("execute").and(NotTakesArguments)).intercept(to(WSInterceptor)))
+  addTransformation((builder, _) ⇒ builder.method(named("execute").and(TakesArguments)).intercept(to(WSInterceptor)))
 
   object WSInterceptor {
     def execute(@SuperCall callable: Callable[Future[WSResponse]], @This request: WSRequest): Future[WSResponse] = {

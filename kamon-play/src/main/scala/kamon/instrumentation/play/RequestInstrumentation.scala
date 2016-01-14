@@ -20,7 +20,7 @@ import java.util.concurrent.Callable
 import kamon.Kamon.tracer
 import kamon.play.PlayExtension
 import kamon.trace._
-import kamon.util.SameThreadExecutionContext
+import kamon.util.{initializer, SameThreadExecutionContext}
 import kamon.util.instrumentation.KamonInstrumentation
 import net.bytebuddy.description.NamedElement
 import net.bytebuddy.implementation.MethodDelegation._
@@ -40,12 +40,15 @@ class RequestHeaderToTraceContextAware extends KamonInstrumentation {
 
   addMixin(classOf[InjectTraceContext])
 
-  addTransformation((b,td) =>
-    b.classVisitor(RunnableVisitor(td))
-  )
+//  addTransformation((b,td) =>
+//    b.classVisitor(RunnableVisitor(td))
+//  )
 
   class InjectTraceContext extends TraceContextAware {
-    val traceContext:TraceContext = null
+    @transient var traceContext:TraceContext = _
+
+    @initializer
+    def init() = this.traceContext = Tracer.currentContext
   }
 }
 

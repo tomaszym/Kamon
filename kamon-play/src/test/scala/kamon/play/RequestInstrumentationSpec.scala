@@ -37,7 +37,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ Await, Future }
 
 class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
-  System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
+//  System.setProperty("config.file", "./kamon-play/src/test/resources/conf/application.conf")
 
   override lazy val port: Port = 19002
   val executor = scala.concurrent.ExecutionContext.Implicits.global
@@ -84,6 +84,7 @@ class RequestInstrumentationSpec extends PlaySpec with OneServerPerSuite {
     ("play.http.requestHandler", "play.api.http.DefaultHttpRequestHandler"),
     ("logger.root", "OFF"),
     ("logger.play", "OFF"),
+    ("config.file", "./kamon-play/src/test/resources/conf/application.conf"),
     ("logger.application", "OFF")))
 
   val traceTokenValue = "kamon-trace-token-test"

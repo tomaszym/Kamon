@@ -18,22 +18,27 @@ package kamon.instrumentation.jdbc
 import java.util.concurrent.Callable
 
 import kamon.util.instrumentation.KamonInstrumentation
-import net.bytebuddy.implementation.FieldAccessor
 import net.bytebuddy.implementation.MethodDelegation._
 import net.bytebuddy.implementation.bind.annotation._
 import net.bytebuddy.matcher.ElementMatchers._
+
+import scala.beans.BeanProperty
 
 class PreparedStatementInstrumentation extends KamonInstrumentation {
 
   forSubtypeOf("java.sql.PreparedStatement")
 
-  addTransformation { (builder, typeDescription) ⇒
+  addMixin(classOf[PreparedStatementInjector])
+
+  addTransformation { (builder, _) ⇒
     builder
-      .implement(classOf[PreparedStatementExtension]).intercept(FieldAccessor.ofBeanProperty())
-      .defineField("sql", classOf[String])
-      .method(named("execute")).intercept(to(PreparedStatementInterceptor).filter(NotDeclaredByObject))
-      .method(named("executeUpdate")).intercept(to(PreparedStatementInterceptor).filter(NotDeclaredByObject))
-      .method(named("executeQuery")).intercept(to(PreparedStatementInterceptor).filter(NotDeclaredByObject))
+      .method(named("execute").or(named("executeUpdate").or(named("executeQuery"))))
+      .intercept(to(PreparedStatementInterceptor).filter(NotDeclaredByObject))
+  }
+
+
+  class PreparedStatementInjector extends PreparedStatementExtension {
+    @BeanProperty var sql:String = _
   }
 
   object PreparedStatementInterceptor {

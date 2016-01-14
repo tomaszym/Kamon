@@ -28,9 +28,9 @@ class StatementInstrumentation extends KamonInstrumentation {
 
   forSubtypeOf("java.sql.Statement")
 
-  addTransformation { (builder, typeDescription) ⇒ {
+  addTransformation { (builder, _) ⇒ {
     builder
-      .method(named[NamedElement]("execute").or(named[NamedElement]("executeUpdate").or(named[NamedElement]("executeQuery"))).and(NotTakesArguments))
+      .method(named[NamedElement]("execute").or(named[NamedElement]("executeUpdate").or(named[NamedElement]("executeQuery"))).and(TakesArguments))
       .intercept(to(StatementInterceptor)
       .filter(NotDeclaredByObject))
     }

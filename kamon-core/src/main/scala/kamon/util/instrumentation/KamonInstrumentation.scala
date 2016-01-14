@@ -40,7 +40,7 @@ abstract class KamonInstrumentation {
 
   val typePool = TypePool.Default.ofClassPath()
   val NotDeclaredByObject: Junction[MethodDescription] = not(isDeclaredBy(classOf[Object]))
-  val NotTakesArguments: Junction[MethodDescription] = not(takesArguments(0))
+  val TakesArguments: Junction[MethodDescription] = not(takesArguments(0))
 
   //TODO:configure listener
   def register(instrumentation: Instrumentation): Unit = {

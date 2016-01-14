@@ -17,9 +17,9 @@
 package kamon.play
 
 import kamon.Kamon
-import kamon.metric.{ Entity, EntitySnapshot, TraceMetrics }
-import kamon.trace.{ Tracer, TraceContext, SegmentCategory }
-import org.scalatest.{ Matchers, WordSpecLike }
+import kamon.metric.{Entity, EntitySnapshot}
+import kamon.trace.{SegmentCategory, TraceContext, Tracer}
+import org.scalatest.{Matchers, WordSpecLike}
 import org.scalatestplus.play.OneServerPerSuite
 import play.api.libs.ws.WS
 import play.api.mvc.Action
